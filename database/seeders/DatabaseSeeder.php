@@ -21,10 +21,22 @@ class DatabaseSeeder extends Seeder
         $items = ['Wireless headphones', 'Ceramic mug', 'Travel backpack', 'Desk lamp', 'Cotton jacket', 'Bluetooth speaker', 'Coffee grinder', 'Notebook set', 'Running shoes', 'Water bottle', 'Phone case', 'Canvas tote', 'Kitchen scale', 'Yoga mat', 'Winter scarf'];
 
         foreach ($names as $index => $name) {
-            $customer = Customer::firstOrCreate(
-                ['email' => 'customer'.($index + 1).'@example.test'],
-                ['name' => $name],
+            $email = 'customer'.($index + 1).'@example.test';
+            $user = User::firstOrCreate(
+                ['email' => $email],
+                ['name' => $name, 'password' => config('services.customer_demo.password')],
             );
+            if ($user->wasRecentlyCreated) {
+                $user->forceFill(['email_verified_at' => now()])->save();
+            }
+
+            $customer = Customer::firstOrCreate(
+                ['email' => $email],
+                ['name' => $name, 'user_id' => $user->id],
+            );
+            if ($customer->user_id === null) {
+                $customer->update(['user_id' => $user->id]);
+            }
 
             foreach ([1, 2] as $sequence) {
                 $days = $sequence === 1 ? [2, 7, 14, 30, 31, 45, 59, 60, 61, 90, 3, 12, 25, 40, 1][$index] : 8 + $index;
@@ -42,14 +54,16 @@ class DatabaseSeeder extends Seeder
             }
         }
 
-        User::firstOrCreate(
+        $support = User::firstOrCreate(
             ['email' => config('services.support_demo.email')],
             [
                 'name' => 'Demo Support Reviewer',
                 'password' => config('services.support_demo.password'),
-                'email_verified_at' => now(),
                 'is_support' => true,
             ],
         );
+        if (! $support->hasVerifiedEmail()) {
+            $support->forceFill(['email_verified_at' => now()])->save();
+        }
     }
 }

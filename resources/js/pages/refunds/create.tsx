@@ -1,6 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
-import { login } from '@/routes';
+import { logout } from '@/routes';
 import { store } from '@/routes/refunds';
 
 type Order = {
@@ -11,25 +11,19 @@ type Order = {
     status: string;
     purchased_at: string;
 };
-type Customer = { id: number; name: string; email: string; orders: Order[] };
+type Customer = { name: string; email: string; orders: Order[] };
 
 export default function CreateRefund({
-    customers,
+    customer,
     aiMode,
 }: {
-    customers: Customer[];
+    customer: Customer;
     aiMode: string;
 }) {
-    const [customerId, setCustomerId] = useState(
-        String(customers[0]?.id ?? ''),
-    );
     const [orderReference, setOrderReference] = useState(
-        customers[0]?.orders[0]?.number ?? '',
+        customer.orders[0]?.number ?? '',
     );
-    const customer = customers.find(
-        (person) => String(person.id) === customerId,
-    );
-    const selectedOrder = customer?.orders.find(
+    const selectedOrder = customer.orders.find(
         (order) => order.number === orderReference,
     );
 
@@ -48,10 +42,12 @@ export default function CreateRefund({
                             </div>
                         </div>
                         <Link
-                            href={login()}
+                            href={logout()}
+                            method="post"
+                            as="button"
                             className="rounded-full border border-white/20 px-4 py-2 text-sm text-slate-200 hover:bg-white/10"
                         >
-                            Support sign in →
+                            Sign out
                         </Link>
                     </header>
                     <main className="grid gap-10 py-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
@@ -63,11 +59,11 @@ export default function CreateRefund({
                                 Request a refund with clarity.
                             </h1>
                             <p className="max-w-lg text-base leading-7 text-slate-400">
-                                Select a customer and order, then tell us what
-                                happened. Verified order data and published
-                                rules determine the decision. AI helps
-                                understand your message but cannot override the
-                                policy.
+                                Welcome back, {customer.name}. Select one of
+                                your orders and tell us what happened. Verified
+                                order data and published rules determine the
+                                decision. AI helps interpret your message but
+                                cannot override the policy.
                             </p>
                             <div className="grid gap-3 sm:grid-cols-3">
                                 {[
@@ -88,12 +84,6 @@ export default function CreateRefund({
                                     </div>
                                 ))}
                             </div>
-                            <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm leading-6 text-amber-100/80">
-                                <strong>Demo identity only.</strong> Selecting a
-                                seeded customer is not authentication. Do not
-                                enter real personal or payment information.
-                                “Approved” does not transfer money.
-                            </div>
                         </section>
                         <section className="rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl shadow-black/30 sm:p-8">
                             <div className="flex items-center justify-between gap-3">
@@ -109,74 +99,28 @@ export default function CreateRefund({
                             <Form {...store.form()} className="mt-7 space-y-6">
                                 {({ errors, processing }) => (
                                     <>
-                                        <label className="block space-y-2">
-                                            <span className="text-sm font-medium">
-                                                Customer
-                                            </span>
-                                            <select
-                                                name="customer_id"
-                                                value={customerId}
-                                                onChange={(event) => {
-                                                    const id =
-                                                        event.target.value;
-                                                    setCustomerId(id);
-                                                    setOrderReference(
-                                                        customers.find(
-                                                            (person) =>
-                                                                String(
-                                                                    person.id,
-                                                                ) === id,
-                                                        )?.orders[0]?.number ??
-                                                            '',
-                                                    );
-                                                }}
-                                                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100"
-                                            >
-                                                <option value="">
-                                                    Choose a customer
-                                                </option>
-                                                {customers.map((person) => (
-                                                    <option
-                                                        key={person.id}
-                                                        value={person.id}
-                                                    >
-                                                        {person.name} ·{' '}
-                                                        {person.email}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {errors.customer_id && (
-                                                <span className="text-sm text-rose-400">
-                                                    {errors.customer_id}
-                                                </span>
-                                            )}
-                                        </label>
                                         <div className="space-y-2">
-                                            <label
-                                                htmlFor="order_reference"
-                                                className="text-sm font-medium"
-                                            >
-                                                Order number
-                                            </label>
+                                            <div className="text-sm font-medium">
+                                                Your orders
+                                            </div>
                                             <input
-                                                id="order_reference"
+                                                type="hidden"
                                                 name="order_reference"
                                                 value={orderReference}
-                                                onChange={(event) =>
-                                                    setOrderReference(
-                                                        event.target.value,
-                                                    )
-                                                }
-                                                placeholder="Select below or enter an unknown order"
-                                                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100"
                                             />
                                             {errors.order_reference && (
                                                 <div className="text-sm text-rose-400">
                                                     {errors.order_reference}
                                                 </div>
                                             )}
+                                            {customer.orders.length === 0 && (
+                                                <p className="rounded-lg border border-slate-700 bg-slate-950 p-4 text-sm text-slate-400">
+                                                    No orders are associated
+                                                    with this account yet.
+                                                </p>
+                                            )}
                                             <div className="max-h-48 space-y-2 overflow-auto pt-2">
-                                                {customer?.orders.map(
+                                                {customer.orders.map(
                                                     (order) => (
                                                         <button
                                                             type="button"
@@ -246,7 +190,9 @@ export default function CreateRefund({
                                             )}
                                         </label>
                                         <button
-                                            disabled={processing}
+                                            disabled={
+                                                processing || !selectedOrder
+                                            }
                                             className="w-full rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:opacity-50"
                                         >
                                             {processing

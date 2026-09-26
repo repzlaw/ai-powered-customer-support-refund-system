@@ -9,10 +9,10 @@ class ExampleTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_returns_a_successful_response()
+    public function test_guest_is_sent_to_login_before_opening_the_customer_page()
     {
         $response = $this->get(route('home'));
 
-        $response->assertOk();
+        $response->assertRedirect(route('login'));
     }
 }

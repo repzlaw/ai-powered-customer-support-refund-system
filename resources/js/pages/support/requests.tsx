@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
-import { home } from '@/routes';
+import { logout } from '@/routes';
 
 type Refund = {
     id: number;
@@ -49,10 +49,12 @@ export default function SupportRequests({
                             </h1>
                         </div>
                         <Link
-                            href={home()}
+                            href={logout()}
+                            method="post"
+                            as="button"
                             className="rounded-full border border-white/20 px-4 py-2 text-sm hover:bg-white/10"
                         >
-                            Customer view →
+                            Sign out
                         </Link>
                     </header>
                     <div className="grid gap-3 py-8 sm:grid-cols-4">

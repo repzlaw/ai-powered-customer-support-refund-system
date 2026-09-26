@@ -46,4 +46,8 @@ return [
         'password' => env('SUPPORT_DEMO_PASSWORD', 'DemoSupport123!'),
     ],
 
+    'customer_demo' => [
+        'password' => env('CUSTOMER_DEMO_PASSWORD', 'DemoCustomer123!'),
+    ],
+
 ];

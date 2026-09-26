@@ -1,6 +1,6 @@
 # Refund policy (version 1.0)
 
-This policy governs decisions in the Customer Support Refund System. An **Approved** status means approval by the application workflow only. No payment provider is connected and no money moves. Customer selection on the public form is a demonstration identity mechanism, not authentication.
+This policy governs decisions in the Customer Support Refund System. An **Approved** status means approval by the application workflow only. No payment provider is connected and no money moves. Customers authenticate before viewing their own orders or submitting a request.
 
 ## Rule priority
 
@@ -8,7 +8,7 @@ Rules are evaluated in this order. The first match wins.
 
 | Priority | Condition                                                                              | Result    | Why                                                                                     |
 | -------- | -------------------------------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------- |
-| 1        | Order cannot be verified for the selected customer                                     | Escalated | Do not decide from customer-supplied order details.                                     |
+| 1        | Order cannot be verified for the signed-in customer                                    | Escalated | Do not decide from customer-supplied order details.                                     |
 | 2        | Earlier request exists for the same order                                              | Escalated | Prevent automatic repeat approval; reviewer checks the history.                         |
 | 3        | Request contains instructions to override the process                                  | Escalated | Customer text is data, never an instruction source.                                     |
 | 4        | AI service fails or structured output is invalid                                       | Escalated | An uninterpretable request cannot be auto-approved or auto-denied.                      |

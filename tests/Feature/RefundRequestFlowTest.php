@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class RefundRequestFlowTest extends TestCase
@@ -84,9 +85,10 @@ class RefundRequestFlowTest extends TestCase
 
     public function test_unknown_order_is_escalated_and_persisted_without_trusting_claim(): void
     {
-        $customer = Customer::factory()->create();
+        $user = User::factory()->create();
+        $customer = Customer::factory()->create(['user_id' => $user->id]);
 
-        $this->post(route('refunds.store'), ['customer_id' => $customer->id, 'order_reference' => 'MADE-UP', 'message' => 'I changed my mind and want to return this item.'])->assertRedirect();
+        $this->actingAs($user)->post(route('refunds.store'), ['order_reference' => 'MADE-UP', 'message' => 'I changed my mind and want to return this item.'])->assertRedirect();
 
         $refund = RefundRequest::firstOrFail();
         $this->assertSame('ORDER_NOT_FOUND', $refund->matched_rule);
@@ -176,19 +178,23 @@ class RefundRequestFlowTest extends TestCase
         Http::assertSentCount(1);
     }
 
-    public function test_order_belonging_to_another_demo_customer_is_not_verified(): void
+    public function test_order_belonging_to_another_customer_is_not_verified_even_with_a_forged_customer_id(): void
     {
         $order = Order::factory()->create();
-        $otherCustomer = Customer::factory()->create();
+        $user = User::factory()->create();
+        $otherCustomer = Customer::factory()->create(['user_id' => $user->id]);
 
-        $this->post(route('refunds.store'), ['customer_id' => $otherCustomer->id, 'order_reference' => $order->number, 'message' => 'I changed my mind and want to return this item.'])->assertRedirect();
+        $this->actingAs($user)->post(route('refunds.store'), ['customer_id' => $order->customer_id, 'order_reference' => $order->number, 'message' => 'I changed my mind and want to return this item.'])->assertRedirect();
 
         $this->assertDatabaseHas('refund_requests', ['customer_id' => $otherCustomer->id, 'order_id' => null, 'matched_rule' => 'ORDER_NOT_FOUND']);
     }
 
     public function test_missing_required_fields_are_rejected_without_a_record(): void
     {
-        $this->post(route('refunds.store'), [])->assertSessionHasErrors(['customer_id', 'order_reference', 'message']);
+        $user = User::factory()->create();
+        Customer::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)->post(route('refunds.store'), [])->assertSessionHasErrors(['order_reference', 'message']);
 
         $this->assertDatabaseCount('refund_requests', 0);
     }
@@ -200,7 +206,53 @@ class RefundRequestFlowTest extends TestCase
 
         $this->assertDatabaseCount('customers', 15);
         $this->assertDatabaseCount('orders', 30);
-        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseCount('users', 16);
+        $this->assertSame(15, Customer::whereNotNull('user_id')->count());
+        $this->assertNotNull(User::where('email', 'customer1@example.test')->firstOrFail()->email_verified_at);
+    }
+
+    public function test_guest_cannot_view_orders_submit_or_open_a_result(): void
+    {
+        $refund = RefundRequest::factory()->create();
+
+        $this->get(route('home'))->assertRedirect(route('login'));
+        $this->post(route('refunds.store'), ['order_reference' => 'ANY', 'message' => 'I changed my mind.'])->assertRedirect(route('login'));
+        $this->get(route('refunds.show', $refund->public_token))->assertRedirect(route('login'));
+    }
+
+    public function test_customer_page_contains_only_the_signed_in_customers_orders(): void
+    {
+        $user = User::factory()->create();
+        $customer = Customer::factory()->create(['user_id' => $user->id]);
+        $ownOrder = Order::factory()->create(['customer_id' => $customer->id]);
+        Order::factory()->create();
+
+        $this->actingAs($user)->get(route('home'))->assertInertia(fn (Assert $page) => $page
+            ->component('refunds/create')
+            ->where('customer.email', $customer->email)
+            ->has('customer.orders', 1)
+            ->where('customer.orders.0.number', $ownOrder->number)
+            ->etc());
+    }
+
+    public function test_customer_cannot_open_another_customers_result(): void
+    {
+        $owner = User::factory()->create();
+        $customer = Customer::factory()->create(['user_id' => $owner->id]);
+        $refund = RefundRequest::factory()->create(['customer_id' => $customer->id]);
+        $otherUser = User::factory()->create();
+        Customer::factory()->create(['user_id' => $otherUser->id]);
+
+        $this->actingAs($otherUser)->get(route('refunds.show', $refund->public_token))->assertNotFound();
+        $this->actingAs($owner)->get(route('refunds.show', $refund->public_token))->assertOk();
+    }
+
+    public function test_support_account_cannot_submit_customer_refund(): void
+    {
+        $support = User::factory()->create(['is_support' => true]);
+
+        $this->actingAs($support)->post(route('refunds.store'), ['order_reference' => 'ANY', 'message' => 'I changed my mind.'])->assertForbidden();
+        $this->assertDatabaseCount('refund_requests', 0);
     }
 
     public function test_only_support_users_can_open_audit_dashboard(): void
@@ -212,8 +264,15 @@ class RefundRequestFlowTest extends TestCase
 
     private function submit(Order $order, string $message): TestResponse
     {
-        return $this->post(route('refunds.store'), [
-            'customer_id' => $order->customer_id,
+        $customer = $order->customer;
+        if ($customer->user_id === null) {
+            $user = User::factory()->create();
+            $customer->update(['user_id' => $user->id]);
+        } else {
+            $user = $customer->user;
+        }
+
+        return $this->actingAs($user)->post(route('refunds.store'), [
             'order_reference' => $order->number,
             'message' => $message,
         ]);
