@@ -10,6 +10,7 @@ type Order = {
     final_sale: boolean;
     status: string;
     purchased_at: string;
+    previous_decision: 'Approved' | 'Denied' | 'Escalated' | null;
 };
 type Customer = { name: string; email: string; orders: Order[] };
 
@@ -21,10 +22,17 @@ export default function CreateRefund({
     aiMode: string;
 }) {
     const [orderReference, setOrderReference] = useState(
-        customer.orders[0]?.number ?? '',
+        customer.orders.find((order) => !order.previous_decision || order.previous_decision === 'Denied')?.number ?? '',
     );
+    const [orderPickerOpen, setOrderPickerOpen] = useState(false);
+    const [orderSearch, setOrderSearch] = useState('');
     const selectedOrder = customer.orders.find(
         (order) => order.number === orderReference,
+    );
+    const matchingOrders = customer.orders.filter((order) =>
+        `${order.item_name} ${order.number}`
+            .toLowerCase()
+            .includes(orderSearch.trim().toLowerCase()),
     );
 
     return (
@@ -59,7 +67,9 @@ export default function CreateRefund({
                                 Request a refund with clarity.
                             </h1>
                             <p className="max-w-lg text-base leading-7 text-slate-400">
-                                Welcome back, {customer.name}. Select one of
+                                Welcome back,
+                                <b> {customer.name}.</b>
+                                Select one of
                                 your orders and tell us what happened. Verified
                                 order data and published rules determine the
                                 decision. AI helps interpret your message but
@@ -100,9 +110,9 @@ export default function CreateRefund({
                                 {({ errors, processing }) => (
                                     <>
                                         <div className="space-y-2">
-                                            <div className="text-sm font-medium">
-                                                Your orders
-                                            </div>
+                                            <label className="block text-sm font-medium" htmlFor="order-picker">
+                                                Your order
+                                            </label>
                                             <input
                                                 type="hidden"
                                                 name="order_reference"
@@ -119,49 +129,75 @@ export default function CreateRefund({
                                                     with this account yet.
                                                 </p>
                                             )}
-                                            <div className="max-h-48 space-y-2 overflow-auto pt-2">
-                                                {customer.orders.map(
-                                                    (order) => (
-                                                        <button
-                                                            type="button"
-                                                            key={order.number}
-                                                            onClick={() =>
-                                                                setOrderReference(
-                                                                    order.number,
-                                                                )
-                                                            }
-                                                            className={`flex w-full items-center justify-between rounded-lg border p-3 text-left text-sm ${orderReference === order.number ? 'border-cyan-400 bg-cyan-500/10' : 'border-slate-700 bg-slate-950 hover:border-slate-500'}`}
-                                                        >
-                                                            <span>
-                                                                <strong className="block">
-                                                                    {
-                                                                        order.item_name
-                                                                    }
-                                                                </strong>
-                                                                <span className="text-xs text-slate-400">
-                                                                    {
-                                                                        order.number
-                                                                    }{' '}
-                                                                    ·{' '}
-                                                                    {
-                                                                        order.purchased_at
-                                                                    }
-                                                                    {order.final_sale
-                                                                        ? ' · final sale'
-                                                                        : ''}
+                                            {customer.orders.length > 0 && (
+                                                <button
+                                                    id="order-picker"
+                                                    type="button"
+                                                    aria-expanded={orderPickerOpen}
+                                                    aria-controls="order-options"
+                                                    onClick={() => setOrderPickerOpen(!orderPickerOpen)}
+                                                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-950 p-3 text-left text-sm hover:border-cyan-400"
+                                                >
+                                                    <span>
+                                                        <strong className="block">{selectedOrder?.item_name ?? 'Select an order'}</strong>
+                                                        {selectedOrder && (
+                                                            <span className="text-xs text-slate-400">
+                                                                {selectedOrder.number} · {selectedOrder.purchased_at} · ${(selectedOrder.amount_cents / 100).toFixed(2)}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    <span className="shrink-0 text-cyan-300">Change ▾</span>
+                                                </button>
+                                            )}
+                                            {orderPickerOpen && (
+                                                <div id="order-options" className="space-y-2 rounded-lg border border-slate-700 bg-slate-950 p-3">
+                                                    <input
+                                                        type="search"
+                                                        autoFocus
+                                                        value={orderSearch}
+                                                        onChange={(event) => setOrderSearch(event.target.value)}
+                                                        placeholder="Search item or order number"
+                                                        aria-label="Search your orders"
+                                                        className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+                                                    />
+                                                    <div className="max-h-56 space-y-1 overflow-y-auto">
+                                                        {matchingOrders.slice(0, 8).map((order) => (
+                                                            <button
+                                                                type="button"
+                                                                key={order.number}
+                                                                disabled={order.previous_decision !== null && order.previous_decision !== 'Denied'}
+                                                                onClick={() => {
+                                                                    setOrderReference(order.number);
+                                                                    setOrderPickerOpen(false);
+                                                                    setOrderSearch('');
+                                                                }}
+                                                                className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-slate-800 focus:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
+                                                            >
+                                                                <span>
+                                                                    <strong className="block">{order.item_name}</strong>
+                                                                    <span className="text-xs text-slate-400">{order.number} · {order.purchased_at}</span>
                                                                 </span>
-                                                            </span>
-                                                            <span className="font-semibold">
-                                                                $
-                                                                {(
-                                                                    order.amount_cents /
-                                                                    100
-                                                                ).toFixed(2)}
-                                                            </span>
-                                                        </button>
-                                                    ),
-                                                )}
-                                            </div>
+                                                                {order.previous_decision ? (
+                                                                    <span className={`shrink-0 rounded-full border px-2 py-1 text-xs ${order.previous_decision === 'Denied' ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-300'}`}>
+                                                                        {order.previous_decision === 'Denied' ? 'Previously denied · Request review' : 'Refund already requested'}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="shrink-0">${(order.amount_cents / 100).toFixed(2)}</span>
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                        {matchingOrders.length === 0 && (
+                                                            <p className="px-3 py-2 text-sm text-slate-400">No matching orders.</p>
+                                                        )}
+                                                    </div>
+                                                    {matchingOrders.length > 8 && (
+                                                        <p className="px-3 text-xs text-slate-400">Showing 8 of {matchingOrders.length} matches. Refine your search to find another order.</p>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {customer.orders.length > 0 && !selectedOrder && (
+                                                <p className="text-sm text-slate-400">No orders are available for a new refund request. Only previously denied requests can be reviewed again.</p>
+                                            )}
                                         </div>
                                         {selectedOrder && (
                                             <div className="rounded-lg bg-slate-800 px-4 py-3 text-xs text-slate-300">
@@ -191,7 +227,7 @@ export default function CreateRefund({
                                         </label>
                                         <button
                                             disabled={
-                                                processing || !selectedOrder
+                                                processing || !selectedOrder || (selectedOrder.previous_decision !== null && selectedOrder.previous_decision !== 'Denied')
                                             }
                                             className="w-full rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:opacity-50"
                                         >

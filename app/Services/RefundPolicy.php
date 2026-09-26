@@ -15,7 +15,7 @@ class RefundPolicy
             return $this->result('Escalated', 'ORDER_NOT_FOUND', 'We could not verify that order for the selected customer.');
         }
         if ($duplicate) {
-            return $this->result('Escalated', 'DUPLICATE_REQUEST', 'A refund request already exists for this order.');
+            return $this->result('Escalated', 'DUPLICATE_REQUEST', 'A previous request was denied, so this follow-up needs support review.');
         }
         if (preg_match('/\b(ignore (all |previous |the )?(instructions|rules|policy)|override (the )?(rules|policy)|bypass (the )?policy|system prompt|developer message|approve (this |my )?request regardless|jailbreak)\b/i', $message)) {
             return $this->result('Escalated', 'SUSPICIOUS_INSTRUCTIONS', 'The request contains instructions aimed at changing the review process.');

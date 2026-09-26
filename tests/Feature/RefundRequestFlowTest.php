@@ -96,15 +96,31 @@ class RefundRequestFlowTest extends TestCase
         $this->assertFalse($refund->verified_facts['verified']);
     }
 
-    public function test_duplicate_request_is_escalated_and_both_attempts_are_audited(): void
+    public function test_duplicate_request_is_rejected_without_creating_another_record(): void
     {
         $order = Order::factory()->create();
 
         $this->submit($order, 'I changed my mind and want to return this item.')->assertRedirect();
-        $this->submit($order, 'I changed my mind and want to return this item.')->assertRedirect();
+        $this->submit($order, 'I changed my mind and want to return this item.')
+            ->assertSessionHasErrors('order_reference');
 
-        $this->assertSame(['Approved', 'Escalated'], RefundRequest::orderBy('id')->pluck('decision')->all());
+        $this->assertDatabaseCount('refund_requests', 1);
+        $this->assertDatabaseHas('refund_requests', ['order_id' => $order->id, 'decision' => 'Approved']);
+    }
+
+    public function test_follow_up_to_denied_request_is_escalated_once(): void
+    {
+        $order = Order::factory()->create(['final_sale' => true]);
+
+        $this->submit($order, 'I changed my mind and want to return this item.')->assertRedirect();
+        $this->submit($order, 'Please review my denied refund request again.')->assertRedirect();
+
+        $this->assertSame(['Denied', 'Escalated'], RefundRequest::where('order_id', $order->id)->orderBy('id')->pluck('decision')->all());
         $this->assertSame('DUPLICATE_REQUEST', RefundRequest::latest('id')->firstOrFail()->matched_rule);
+
+        $this->submit($order, 'I would like to submit another refund request.')
+            ->assertSessionHasErrors('order_reference');
+        $this->assertDatabaseCount('refund_requests', 2);
     }
 
     public function test_prompt_injection_cannot_approve_a_request(): void
@@ -232,6 +248,23 @@ class RefundRequestFlowTest extends TestCase
             ->where('customer.email', $customer->email)
             ->has('customer.orders', 1)
             ->where('customer.orders.0.number', $ownOrder->number)
+            ->etc());
+    }
+
+    public function test_customer_page_exposes_latest_refund_decision_for_each_order(): void
+    {
+        $user = User::factory()->create();
+        $customer = Customer::factory()->create(['user_id' => $user->id]);
+        $requestedOrder = Order::factory()->create(['customer_id' => $customer->id, 'purchased_at' => now()]);
+        $availableOrder = Order::factory()->create(['customer_id' => $customer->id, 'purchased_at' => now()->subDay()]);
+        RefundRequest::factory()->create(['customer_id' => $customer->id, 'order_id' => $requestedOrder->id, 'decision' => 'Denied']);
+
+        $this->actingAs($user)->get(route('home'))->assertInertia(fn (Assert $page) => $page
+            ->component('refunds/create')
+            ->where('customer.orders.0.number', $requestedOrder->number)
+            ->where('customer.orders.0.previous_decision', 'Denied')
+            ->where('customer.orders.1.number', $availableOrder->number)
+            ->where('customer.orders.1.previous_decision', null)
             ->etc());
     }
 

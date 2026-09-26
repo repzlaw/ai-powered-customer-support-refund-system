@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\RefundRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProcessRefundRequest
 {
@@ -14,7 +15,13 @@ class ProcessRefundRequest
     public function handle(Customer $customer, string $orderReference, string $message): RefundRequest
     {
         $order = Order::whereBelongsTo($customer)->where('number', $orderReference)->first();
-        $duplicate = $order !== null && RefundRequest::where('order_id', $order->id)->exists();
+        $previousRequest = $order === null ? null : RefundRequest::where('order_id', $order->id)->latest('id')->first();
+        if ($previousRequest !== null && $previousRequest->decision !== 'Denied') {
+            throw ValidationException::withMessages([
+                'order_reference' => 'A refund has already been requested for this order.',
+            ]);
+        }
+        $duplicate = $previousRequest !== null;
         $facts = $order ? [
             'number' => $order->number,
             'item_name' => $order->item_name,

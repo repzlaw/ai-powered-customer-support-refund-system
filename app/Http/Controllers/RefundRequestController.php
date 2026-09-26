@@ -23,6 +23,13 @@ class RefundRequestController extends Controller
             abort(403);
         }
 
+        $previousDecisions = $customer->refundRequests()
+            ->whereNotNull('order_id')
+            ->orderByDesc('id')
+            ->get(['order_id', 'decision'])
+            ->unique('order_id')
+            ->pluck('decision', 'order_id');
+
         return Inertia::render('refunds/create', [
             'customer' => [
                 'name' => $customer->name,
@@ -34,6 +41,7 @@ class RefundRequestController extends Controller
                     'final_sale' => $order->final_sale,
                     'status' => $order->status,
                     'purchased_at' => $order->purchased_at->toDateString(),
+                    'previous_decision' => $previousDecisions->get($order->id),
                 ]),
             ],
             'aiMode' => config('services.refund_ai.mode'),
