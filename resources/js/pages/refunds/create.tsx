@@ -41,10 +41,10 @@ export default function CreateRefund({
                     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
                         <div>
                             <div className="text-xs font-bold tracking-[0.3em] text-cyan-400 uppercase">
-                                WORKNOON · assessment demo
+                                Customer support
                             </div>
                             <div className="mt-2 text-lg font-semibold">
-                                Refund Review Studio
+                                Customer Support Refund System
                             </div>
                         </div>
                         <Link
@@ -60,11 +60,11 @@ export default function CreateRefund({
                                 Customer request
                             </div>
                             <h1 className="max-w-xl text-4xl leading-tight font-semibold tracking-tight sm:text-5xl">
-                                A fair answer, backed by the facts.
+                                Request a refund with clarity.
                             </h1>
                             <p className="max-w-lg text-base leading-7 text-slate-400">
-                                Choose a demo customer and order, then tell us
-                                what happened. Verified order data and published
+                                Select a customer and order, then tell us what
+                                happened. Verified order data and published
                                 rules determine the decision. AI helps
                                 understand your message but cannot override the
                                 policy.
@@ -111,7 +111,7 @@ export default function CreateRefund({
                                     <>
                                         <label className="block space-y-2">
                                             <span className="text-sm font-medium">
-                                                Demo customer
+                                                Customer
                                             </span>
                                             <select
                                                 name="customer_id"

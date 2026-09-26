@@ -42,7 +42,7 @@ export default function SupportRequests({
                     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
                         <div>
                             <div className="text-xs font-bold tracking-[0.3em] text-cyan-400 uppercase">
-                                WORKNOON · support console
+                                Customer Support Refund System
                             </div>
                             <h1 className="mt-2 text-2xl font-semibold">
                                 Refund decisions

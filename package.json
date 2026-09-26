@@ -1,6 +1,6 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
-    "name": "ai-powered-customer-support-refund-system",
+    "name": "customer-support-refund-system",
     "private": true,
     "type": "module",
     "scripts": {

@@ -12,7 +12,7 @@ class RefundPolicy
     public function decide(?Order $order, array $analysis, bool $duplicate, string $message): array
     {
         if ($order === null) {
-            return $this->result('Escalated', 'ORDER_NOT_FOUND', 'We could not verify that order for the selected demo customer.');
+            return $this->result('Escalated', 'ORDER_NOT_FOUND', 'We could not verify that order for the selected customer.');
         }
         if ($duplicate) {
             return $this->result('Escalated', 'DUPLICATE_REQUEST', 'A refund request already exists for this order.');

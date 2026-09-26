@@ -4,7 +4,7 @@ services:
         ports:
             - '8000:8000'
         environment:
-            APP_NAME: 'AI-Powered Customer Support Refund System'
+            APP_NAME: 'Customer Support Refund System'
             APP_ENV: production
             APP_DEBUG: 'false'
             APP_URL: http://localhost:8000

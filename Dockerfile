@@ -17,7 +17,7 @@ RUN mkdir -p storage/framework/views storage/framework/cache/data storage/framew
 RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 RUN php artisan wayfinder:generate --with-form --no-interaction
 RUN npm ci --no-audit --no-fund
-RUN VITE_APP_NAME="AI-Powered Customer Support Refund System" npm run build
+RUN VITE_APP_NAME="Customer Support Refund System" npm run build
 RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 8000

@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "assessment/ai-powered-customer-support-refund-system",
+    "name": "customer-support/refund-system",
     "type": "project",
-    "description": "AI-powered customer support refund system assessment.",
+    "description": "Customer support refund review system with AI-assisted classification and policy-based decisions.",
     "keywords": [
         "laravel",
         "framework"

@@ -28,7 +28,7 @@ export default function RefundResult({
             <div className="flex min-h-screen items-center justify-center bg-slate-950 px-5 py-12 text-slate-100">
                 <main className="w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-8 shadow-2xl">
                     <div className="text-xs font-bold tracking-[0.3em] text-cyan-400 uppercase">
-                        Refund Review Studio
+                        Customer Support Refund System
                     </div>
                     <span
                         className={`mt-8 inline-block rounded-full border px-4 py-2 text-sm font-semibold ${accent}`}
