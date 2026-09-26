@@ -21,6 +21,8 @@ services:
             CUSTOMER_DEMO_PASSWORD: ${CUSTOMER_DEMO_PASSWORD:-DemoCustomer123!}
         volumes:
             - refund_data:/var/www/html/storage/app-data
+            - ./app:/var/www/html/app
+            - ./resources:/var/www/html/resources
 
 volumes:
     refund_data:
