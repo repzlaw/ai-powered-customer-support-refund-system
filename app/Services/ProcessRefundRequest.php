@@ -26,7 +26,7 @@ class ProcessRefundRequest
         $analysis = $this->analyzer->analyze($message);
         $decision = $this->policy->decide($order, $analysis, $duplicate, $message);
         $response = match ($decision['decision']) {
-            'Approved' => 'Your refund request is approved under the refund policy. No payment transfer has been made.',
+            'Approved' => 'Your request meets the refund policy and has been approved.',
             'Denied' => 'Your refund request was denied. '.$decision['reason'],
             default => 'Your refund request needs a support review. '.$decision['reason'],
         };

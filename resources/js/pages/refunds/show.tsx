@@ -57,10 +57,6 @@ export default function RefundResult({
                                   : 'OpenAI model analysis'}
                         </div>
                     </div>
-                    <p className="mt-6 text-sm text-slate-500">
-                        This is a demonstration decision only. No refund payment
-                        has been transferred.
-                    </p>
                     <Link
                         href={home()}
                         className="mt-8 inline-block rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300"
