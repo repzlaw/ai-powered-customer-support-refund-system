@@ -28,7 +28,7 @@ OPENAI_MODEL=gpt-4o-mini
 
 Run `docker compose up --build`. Compose passes these variables to the app. Keep `.env` private; it is ignored by Git and excluded from the Docker build context. The key is used only by Laravel on the server, never sent to the browser. A missing key, HTTP failure, refusal, incomplete response, or invalid structured output causes **Escalated** with an audit reason. The integration calls the [OpenAI Chat Completions API with strict JSON Schema output](https://developers.openai.com/api/reference/resources/chat).
 
-To verify the **real** integration, submit a new request after restarting in `openai` mode, then inspect it in the support dashboard. The request's AI extraction should include `model: gpt-4o-mini`, and its AI mode should be `openai`. A result of `AI_UNAVAILABLE` means the call or response failed; inspect the app logs with `docker compose logs app` without posting secrets publicly. The automated tests mock the API and do **not** prove that a live key works. Because repeat requests for one order are escalated, choose an order that has not already been used during the demo.
+To verify the **real** integration, submit a new request after restarting in `openai` mode, then inspect it in the support dashboard. The request's AI extraction should include `model: gpt-4o-mini`, and its AI mode should be `openai`. A result of `AI_UNAVAILABLE` means the call or response failed; inspect the app logs with `docker compose logs app` without posting secrets publicly. The automated tests mock the API and do **not** prove that a live key works. Because repeat requests for one order are escalated, choose an order that has not already been used during the demo. A live local request was verified on 2026-09-26: the saved record had `openai` mode, `gpt-4o-mini`, no AI error, and a Laravel `STANDARD_ELIGIBLE` approval. The API key remains outside Git.
 
 ## Try the workflow
 
@@ -79,4 +79,4 @@ Record a screen walkthrough; this repository includes the script, **not a record
 
 ## Submission status
 
-The application, Compose setup, policy, tests, and documentation are in this local repository. A live model call has **not** been verified without a user-provided key. The public GitHub repository and actual recorded video remain submission steps; do not claim they are complete until they have been created and checked. Publishing requires the user's repository destination and authorization.
+The application, Compose setup, policy, tests, documentation, and one live model call have been verified locally. The public GitHub repository and actual recorded video remain submission steps; do not claim they are complete until they have been created and checked. Publishing requires the user's repository destination and authorization.
