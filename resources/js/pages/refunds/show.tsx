@@ -51,8 +51,10 @@ export default function RefundResult({
                         <div className="mt-2">
                             Analysis mode:{' '}
                             {aiMode === 'demo'
-                                ? 'labelled demo mode'
-                                : 'live AI'}
+                                ? 'demo classifier (no model call)'
+                                : refund.matched_rule === 'AI_UNAVAILABLE'
+                                  ? 'OpenAI request failed; sent for support review'
+                                  : 'OpenAI model analysis'}
                         </div>
                     </div>
                     <p className="mt-6 text-sm text-slate-500">
