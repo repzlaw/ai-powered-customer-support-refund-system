@@ -15,6 +15,14 @@ class RefundRequestFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('services.refund_ai.mode', 'demo');
+        config()->set('services.refund_ai.key', null);
+    }
+
     public function test_standard_refund_is_approved_at_day_30_and_500_dollars(): void
     {
         $this->travelTo('2026-09-26 12:00:00');
