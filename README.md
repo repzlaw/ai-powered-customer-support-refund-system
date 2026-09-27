@@ -2,6 +2,20 @@
 
 A refund review application built with Laravel 13, React/Inertia, and SQLite. Fifteen synthetic customer accounts have 30 seeded orders. Customers sign in to see only their own orders and submit a request. A language model classifies the claim and drafts a private acknowledgement; a deterministic Laravel service makes the final **Approved**, **Denied**, or **Escalated** decision. The support dashboard displays the facts and audit trail behind each result.
 
+## Screenshots
+
+Customer refund request and searchable order picker:
+
+![Customer refund request form with an open order picker](docs/screenshots/customer-refund-request.png)
+
+Customer-facing decision:
+
+![Approved refund request result](docs/screenshots/refund-decision.png)
+
+Support dashboard with recent requests, verified facts, AI extraction, and audit notes:
+
+![Support dashboard showing refund decisions and audit details](docs/screenshots/support-dashboard.png)
+
 ## Run with Docker
 
 Start Docker Desktop, then from this directory:
