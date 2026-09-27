@@ -74,6 +74,7 @@ class RefundRequestController extends Controller
         return Inertia::render('refunds/show', [
             'refund' => $refund->only(['order_reference', 'decision', 'customer_response', 'matched_rule', 'created_at']),
             'aiMode' => $refund->ai_mode,
+            'aiProvider' => $refund->audit_notes['ai_provider'] ?? 'openai',
         ]);
     }
 }

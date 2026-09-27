@@ -9,7 +9,7 @@ Rules are evaluated in this order. The first match wins.
 | Priority | Condition                                                                              | Result    | Why                                                                                     |
 | -------- | -------------------------------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------- |
 | 1        | Order cannot be verified for the signed-in customer                                    | Escalated | Do not decide from customer-supplied order details.                                     |
-| 2        | Earlier request exists for the same order                                              | Escalated | Prevent automatic repeat approval; reviewer checks the history.                         |
+| 2        | Most recent request for the same order was Denied                                      | Escalated | A single follow-up goes to a reviewer rather than receiving automatic approval.         |
 | 3        | Request contains instructions to override the process                                  | Escalated | Customer text is data, never an instruction source.                                     |
 | 4        | AI service fails or structured output is invalid                                       | Escalated | An uninterpretable request cannot be auto-approved or auto-denied.                      |
 | 5        | Description contains conflicting claims                                                | Escalated | Reviewer asks for clarification.                                                        |
@@ -25,5 +25,7 @@ Rules are evaluated in this order. The first match wins.
 | 14       | Otherwise                                                                              | Approved  | Paid, standard, non-final-sale order within 30 days and at most $500.                   |
 
 The damaged final-sale case is deliberately **Escalated** within 60 days: final-sale status does not suppress a possible damaged-goods exception, but an unverified customer claim cannot be auto-approved. After 60 days it is **Denied** unless a human reviewer handles an exception outside this automated workflow. A high-value ordinary final-sale request is **Denied** because the final-sale rule precedes the amount rule.
+
+Orders whose latest request was Approved or Escalated cannot be submitted again; Laravel rejects those submissions before policy evaluation. A Denied request may be submitted once more, and that follow-up is Escalated under priority 2. The follow-up then blocks further submissions.
 
 The LLM may classify the customer claim, identify conflicting claims, and offer a private draft acknowledgement. It does not receive decision authority. The application validates its structured fields, applies this rule order to database facts, and sends a deterministic customer response. The private draft is visible only on the support dashboard. Suspicious override phrases are also checked directly in Laravel so model behavior cannot bypass that safeguard.

@@ -12,9 +12,11 @@ type Refund = {
 export default function RefundResult({
     refund,
     aiMode,
+    aiProvider,
 }: {
     refund: Refund;
     aiMode: string;
+    aiProvider: string;
 }) {
     const accent =
         refund.decision === 'Approved'
@@ -53,8 +55,8 @@ export default function RefundResult({
                             {aiMode === 'demo'
                                 ? 'demo classifier (no model call)'
                                 : refund.matched_rule === 'AI_UNAVAILABLE'
-                                  ? 'OpenAI request failed; sent for support review'
-                                  : 'OpenAI model analysis'}
+                                  ? `${aiProvider} request failed; sent for support review`
+                                  : `${aiProvider} model analysis`}
                         </div>
                     </div>
                     <Link

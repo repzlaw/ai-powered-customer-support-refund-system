@@ -14,8 +14,12 @@ services:
             CACHE_STORE: database
             QUEUE_CONNECTION: sync
             REFUND_AI_MODE: ${REFUND_AI_MODE:-demo}
+            REFUND_AI_PROVIDER: ${REFUND_AI_PROVIDER:-openai}
+            REFUND_AI_MODEL: ${REFUND_AI_MODEL:-}
             OPENAI_API_KEY: ${OPENAI_API_KEY:-}
             OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+            ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+            OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
             SUPPORT_DEMO_EMAIL: ${SUPPORT_DEMO_EMAIL:-support@example.test}
             SUPPORT_DEMO_PASSWORD: ${SUPPORT_DEMO_PASSWORD:-DemoSupport123!}
             CUSTOMER_DEMO_PASSWORD: ${CUSTOMER_DEMO_PASSWORD:-DemoCustomer123!}

@@ -55,6 +55,8 @@ class ProcessRefundRequest
                 'reason' => $decision['reason'],
                 'duplicate_order_request' => $duplicate,
                 'ai_error' => $analysis['error'] ?? null,
+                'ai_provider' => config('services.refund_ai.mode') === 'demo' ? 'demo' : config('services.refund_ai.provider'),
+                'ai_model' => $analysis['model'] ?? config('services.refund_ai.model'),
                 'manual_review_required' => $decision['decision'] === 'Escalated',
             ],
         ]);
