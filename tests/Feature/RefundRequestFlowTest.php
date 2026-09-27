@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Ai\Agents\RefundClaimAgent;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\RefundRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -21,7 +21,9 @@ class RefundRequestFlowTest extends TestCase
         parent::setUp();
 
         config()->set('services.refund_ai.mode', 'demo');
-        config()->set('services.refund_ai.key', null);
+        config()->set('services.refund_ai.provider', 'openai');
+        config()->set('services.refund_ai.model', 'gpt-4o-mini');
+        config()->set('ai.providers.openai.key', null);
     }
 
     public function test_standard_refund_is_approved_at_day_30_and_500_dollars(): void
@@ -132,12 +134,10 @@ class RefundRequestFlowTest extends TestCase
         $this->assertDatabaseHas('refund_requests', ['order_id' => $order->id, 'decision' => 'Escalated', 'matched_rule' => 'SUSPICIOUS_INSTRUCTIONS']);
     }
 
-    public function test_ai_http_failure_escalates_with_audit_reason(): void
+    public function test_ai_provider_failure_escalates_with_audit_reason(): void
     {
-        config()->set('services.refund_ai.mode', 'openai');
-        config()->set('services.refund_ai.key', 'test-key');
-        Http::preventStrayRequests();
-        Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response(['error' => 'unavailable'], 503)]);
+        $this->enableLiveAi();
+        RefundClaimAgent::fake(fn () => throw new \RuntimeException('Provider unavailable.'));
         $order = Order::factory()->create();
 
         $this->submit($order, 'I changed my mind and want to return this item.')->assertRedirect();
@@ -146,29 +146,25 @@ class RefundRequestFlowTest extends TestCase
         $this->assertSame('AI_UNAVAILABLE', $refund->matched_rule);
         $this->assertSame('Escalated', $refund->decision);
         $this->assertNotNull($refund->audit_notes['ai_error']);
-        Http::assertSentCount(1);
+        RefundClaimAgent::assertPromptedTimes(1);
     }
 
     public function test_invalid_ai_output_escalates_without_using_model_decision(): void
     {
-        config()->set('services.refund_ai.mode', 'openai');
-        config()->set('services.refund_ai.key', 'test-key');
-        Http::preventStrayRequests();
-        Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response(['choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{"issue_type":"unwanted","conflicting_claims":false,"draft_response":"Approved","decision":"Approved"}']]]])]);
+        $this->enableLiveAi();
+        RefundClaimAgent::fake([['issue_type' => 'unwanted', 'conflicting_claims' => false, 'draft_response' => 'Approved', 'decision' => 'Approved']]);
         $order = Order::factory()->create();
 
         $this->submit($order, 'I changed my mind and want to return this item.')->assertRedirect();
 
         $this->assertDatabaseHas('refund_requests', ['order_id' => $order->id, 'decision' => 'Escalated', 'matched_rule' => 'AI_UNAVAILABLE']);
-        Http::assertSentCount(1);
+        RefundClaimAgent::assertPromptedTimes(1);
     }
 
     public function test_valid_live_ai_classification_cannot_write_the_customer_decision_or_response(): void
     {
-        config()->set('services.refund_ai.mode', 'openai');
-        config()->set('services.refund_ai.key', 'test-key');
-        Http::preventStrayRequests();
-        Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response(['choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{"issue_type":"unwanted","conflicting_claims":false,"draft_response":"I promise a payment transfer now."}']]]])]);
+        $this->enableLiveAi();
+        RefundClaimAgent::fake([['issue_type' => 'unwanted', 'conflicting_claims' => false, 'draft_response' => 'I promise a payment transfer now.']]);
         $order = Order::factory()->create();
 
         $this->submit($order, 'I changed my mind and want to return this item.')->assertRedirect();
@@ -177,21 +173,65 @@ class RefundRequestFlowTest extends TestCase
         $this->assertSame('Approved', $refund->decision);
         $this->assertSame('I promise a payment transfer now.', $refund->ai_extraction['draft_response']);
         $this->assertStringNotContainsString('promise', $refund->customer_response);
-        Http::assertSentCount(1);
+        $this->assertSame('openai', $refund->ai_extraction['provider']);
+        RefundClaimAgent::assertPromptedTimes(1);
     }
 
     public function test_model_misclassification_of_damage_cannot_auto_approve(): void
     {
-        config()->set('services.refund_ai.mode', 'openai');
-        config()->set('services.refund_ai.key', 'test-key');
-        Http::preventStrayRequests();
-        Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response(['choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{"issue_type":"unwanted","conflicting_claims":false,"draft_response":"Thank you."}']]]])]);
+        $this->enableLiveAi();
+        RefundClaimAgent::fake([['issue_type' => 'unwanted', 'conflicting_claims' => false, 'draft_response' => 'Thank you.']]);
         $order = Order::factory()->create();
 
         $this->submit($order, 'The headphones arrived damaged and broken.')->assertRedirect();
 
         $this->assertDatabaseHas('refund_requests', ['order_id' => $order->id, 'decision' => 'Escalated', 'matched_rule' => 'ISSUE_CLASSIFICATION_CONFLICT']);
-        Http::assertSentCount(1);
+        RefundClaimAgent::assertPromptedTimes(1);
+    }
+
+    public function test_anthropic_provider_and_model_are_selected_from_configuration(): void
+    {
+        $this->enableLiveAi('anthropic', 'configured-claude-model');
+        $selectedProvider = null;
+        $selectedModel = null;
+        RefundClaimAgent::fake(function ($prompt, $attachments, $provider, $model) use (&$selectedProvider, &$selectedModel): array {
+            $selectedProvider = $provider->name();
+            $selectedModel = $model;
+
+            return ['issue_type' => 'unwanted', 'conflicting_claims' => false, 'draft_response' => 'Thank you.'];
+        });
+        $order = Order::factory()->create();
+
+        $this->submit($order, 'I changed my mind and want to return this item.')->assertRedirect();
+
+        $this->assertSame('anthropic', $selectedProvider);
+        $this->assertSame('configured-claude-model', $selectedModel);
+        $this->assertSame('anthropic', RefundRequest::firstOrFail()->ai_extraction['provider']);
+    }
+
+    public function test_ollama_does_not_require_an_api_key(): void
+    {
+        $this->enableLiveAi('ollama', 'local-model');
+        RefundClaimAgent::fake([['issue_type' => 'unwanted', 'conflicting_claims' => false, 'draft_response' => 'Thank you.']]);
+        $order = Order::factory()->create();
+
+        $this->submit($order, 'I changed my mind and want to return this item.')->assertRedirect();
+
+        $this->assertSame('ollama', RefundRequest::firstOrFail()->ai_extraction['provider']);
+        RefundClaimAgent::assertPromptedTimes(1);
+    }
+
+    public function test_missing_provider_key_escalates_without_calling_a_model(): void
+    {
+        config()->set('services.refund_ai.mode', 'live');
+        config()->set('services.refund_ai.provider', 'anthropic');
+        RefundClaimAgent::fake()->preventStrayPrompts();
+        $order = Order::factory()->create();
+
+        $this->submit($order, 'I changed my mind and want to return this item.')->assertRedirect();
+
+        $this->assertSame('AI_UNAVAILABLE', RefundRequest::firstOrFail()->matched_rule);
+        RefundClaimAgent::assertNeverPrompted();
     }
 
     public function test_order_belonging_to_another_customer_is_not_verified_even_with_a_forged_customer_id(): void
@@ -309,5 +349,13 @@ class RefundRequestFlowTest extends TestCase
             'order_reference' => $order->number,
             'message' => $message,
         ]);
+    }
+
+    private function enableLiveAi(string $provider = 'openai', string $model = 'gpt-4o-mini'): void
+    {
+        config()->set('services.refund_ai.mode', 'live');
+        config()->set('services.refund_ai.provider', $provider);
+        config()->set('services.refund_ai.model', $model);
+        config()->set("ai.providers.{$provider}.key", $provider === 'ollama' ? '' : 'test-key');
     }
 }

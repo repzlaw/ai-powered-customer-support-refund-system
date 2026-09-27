@@ -37,8 +37,8 @@ return [
 
     'refund_ai' => [
         'mode' => env('REFUND_AI_MODE', 'demo'),
-        'key' => env('OPENAI_API_KEY'),
-        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'provider' => env('REFUND_AI_PROVIDER', 'openai'),
+        'model' => env('REFUND_AI_MODEL') ?: (env('REFUND_AI_PROVIDER', 'openai') === 'openai' ? env('OPENAI_MODEL', 'gpt-4o-mini') : null),
     ],
 
     'support_demo' => [
